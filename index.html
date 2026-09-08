@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>GCloud — Личное облако</title>
+  
+  <!-- Material Symbols & Google Fonts -->
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&family=Google+Sans:wght@400;500;700&display=swap" />
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@24,400,0,0" />
+
+  <style>
+    :root {
+      --md-sys-color-primary: #0061a4;
+      --md-sys-color-on-primary: #ffffff;
+      --md-sys-color-primary-container: #d1e4ff;
+      --md-sys-color-on-primary-container: #001d36;
+      --md-sys-color-surface: #fdfcff;
+      --md-sys-color-on-surface: #1a1c1e;
+      --md-sys-color-surface-variant: #dfe2eb;
+      --md-sys-color-on-surface-variant: #43474e;
+      --md-sys-color-outline: #73777f;
+      --md-sys-color-error: #ba1a1a;
+      --md-sys-color-error-container: #ffdad6;
+      --md-sys-shape-corner-extra-large: 28px;
+      --md-sys-shape-corner-large: 16px;
+      --md-sys-shape-corner-medium: 12px;
+      --transition-speed: 0.25s;
+    }
+
+    [data-theme="dark"] {
+      --md-sys-color-primary: #9eccae;
+      --md-sys-color-on-primary: #003822;
+      --md-sys-color-primary-container: #005234;
+      --md-sys-color-on-primary-container: #baf8ce;
+      --md-sys-color-surface: #111412;
+      --md-sys-color-on-surface: #e1e3df;
+      --md-sys-color-surface-variant: #414942;
+      --md-sys-color-on-surface-variant: #c1c9c0;
+      --md-sys-color-outline: #8b938b;
+      --md-sys-color-error: #ffb4ab;
+      --md-sys-color-error-container: #93000a;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Google Sans', 'Roboto', sans-serif; }
+    body { background-color: var(--md-sys-color-surface); color: var(--md-sys-color-on-surface); transition: background-color var(--transition-speed); }
+    
+    /* Login Screen */
+    .login-container { display: flex; height: 100vh; justify-content: center; align-items: center; padding: 16px; }
+    .login-card { background: var(--md-sys-color-surface-variant); padding: 32px; border-radius: var(--md-sys-shape-corner-extra-large); width: 100%; max-width: 400px; text-align: center; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+    .login-card h1 { font-size: 2.2rem; margin-bottom: 8px; color: var(--md-sys-color-primary); }
+    .login-card p { font-size: 0.9rem; margin-bottom: 24px; color: var(--md-sys-color-on-surface-variant); }
+    
+    .input-group { position: relative; margin-bottom: 20px; text-align: left; }
+    .input-group input { width: 100%; padding: 16px; border: 1px solid var(--md-sys-color-outline); border-radius: var(--md-sys-shape-corner-medium); background: transparent; color: var(--md-sys-color-on-surface); font-size: 1rem; outline: none; }
+    .input-group input:focus { border-color: var(--md-sys-color-primary); border-width: 2px; }
+    
+    .btn { background: var(--md-sys-color-primary); color: var(--md-sys-color-on-primary); border: none; padding: 14px 24px; border-radius: 100px; font-weight: 500; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 8px; width: 100%; transition: opacity var(--transition-speed); }
+    .btn:hover { opacity: 0.9; }
+
+    /* App Header & Layout */
+    .app-header { display: flex; justify-content: space-between; align-items: center; padding: 16px 24px; background: var(--md-sys-color-surface-variant); }
+    .logo { display: flex; align-items: center; gap: 12px; font-size: 1.5rem; font-weight: 700; color: var(--md-sys-color-primary); }
+    .header-actions { display: flex; gap: 8px; }
+    .icon-btn { background: transparent; border: none; color: var(--md-sys-color-on-surface); padding: 8px; border-radius: 50%; cursor: pointer; display: flex; align-items: center; }
+    .icon-btn:hover { background: rgba(0,0,0,0.05); }
+
+    .main-container { padding: 24px; max-width: 1200px; margin: 0 auto; min-height: calc(100vh - 80px); }
+    .toolbar { display: flex; flex-wrap: wrap; gap: 16px; justify-content: space-between; align-items: center; margin-bottom: 24px; }
+    .search-box { flex: 1; min-width: 250px; display: flex; align-items: center; background: var(--md-sys-color-surface-variant); padding: 8px 16px; border-radius: 100px; }
+    .search-box input { border: none; background: transparent; outline: none; margin-left: 8px; width: 100%; color: var(--md-sys-color-on-surface); }
+    
+    .breadcrumb { display: flex; align-items: center; gap: 8px; font-size: 1rem; margin-bottom: 16px; color: var(--md-sys-color-primary); }
+    .breadcrumb-item { cursor: pointer; }
+    .breadcrumb-item:hover { text-decoration: underline; }
+
+    /* Grid & Cards */
+    .files-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 16px; }
+    .file-card { background: var(--md-sys-color-surface-variant); border-radius: var(--md-sys-shape-corner-large); padding: 16px; display: flex; flex-direction: column; justify-content: space-between; height: 180px; position: relative; overflow: hidden; transition: transform var(--transition-speed); }
+    .file-card:hover { transform: translateY(-4px); }
+    .file-card .preview { height: 90px; width: 100%; object-fit: cover; border-radius: var(--md-sys-shape-corner-medium); margin-bottom: 8px; display: flex; align-items: center; justify-content: center; background: rgba(0,0,0,0.03); }
+    .file-card .info { display: flex; flex-direction: column; }
+    .file-card .name { font-weight: 500; font-size: 0.9rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .file-card .meta { font-size: 0.75rem; color: var(--md-sys-color-on-surface-variant); }
+    .file-card .actions { position: absolute; top: 8px; right: 8px; display: flex; gap: 4px; background: rgba(0,0,0,0.3); border-radius: 100px; backdrop-filter: blur(4px); }
+    .file-card .actions .icon-btn { color: #fff; padding: 4px; }
+
+    /* FAB */
+    .fab-group { position: fixed; bottom: 24px; right: 24px; display: flex; flex-direction: column; gap: 12px; }
+    .fab { width: 56px; height: 56px; border-radius: var(--md-sys-shape-corner-large); background: var(--md-sys-color-primary-container); color: var(--md-sys-color-on-primary-container); border: none; display: flex; align-items: center; justify-content: center; cursor: pointer; box-shadow: 0 4px 10px rgba(0,0,0,0.2); }
+
+    /* Drag Drop Area */
+    .drag-active { border: 2px dashed var(--md-sys-color-primary); background: var(--md-sys-color-primary-container); }
+    
+    /* Progress & Modals */
+    .progress-bar { position: fixed; top: 0; left: 0; width: 0%; height: 4px; background: var(--md-sys-color-primary); transition: width 0.2s; z-index: 1000; }
+    .hidden { display: none !important; }
+  </style>
+</head>
+<body id="dropZone">
+
+  <div id="progressBar" class="progress-bar"></div>
+
+  <!-- Экран Входа -->
+  <div id="loginScreen" class="login-container">
+    <div class="login-card">
+      <h1>GCloud</h1>
+      <p>Введите пароль для доступа к хранилищу</p>
+      <div class="input-group">
+        <input type="password" id="passwordInput" placeholder="Пароль" />
+      </div>
+      <button class="btn" id="loginBtn">
+        <span class="material-symbols-outlined">key</span> Войти
+      </button>
+      <p id="loginError" style="color: var(--md-sys-color-error); margin-top: 12px; font-size: 0.85rem;" class="hidden"></p>
+    </div>
+  </div>
+
+  <!-- Главный Интерфейс -->
+  <div id="appScreen" class="hidden">
+    <header class="app-header">
+      <div class="logo">
+        <span class="material-symbols-outlined">cloud</span> GCloud
+      </div>
+      <div class="header-actions">
+        <button class="icon-btn" id="themeToggle" title="Смена темы">
+          <span class="material-symbols-outlined">dark_mode</span>
+        </button>
+        <button class="icon-btn" id="logoutBtn" title="Выйти">
+          <span class="material-symbols-outlined">logout</span>
+        </button>
+      </div>
+    </header>
+
+    <main class="main-container">
+      <div class="toolbar">
+        <div class="search-box">
+          <span class="material-symbols-outlined">search</span>
+          <input type="text" id="searchInput" placeholder="Поиск файлов..." />
+        </div>
+        <div>
+          <select id="sortSelect" style="padding: 8px 12px; border-radius: 8px; background: var(--md-sys-color-surface-variant); color: var(--md-sys-color-on-surface); border: none;">
+            <option value="name">По имени</option>
+            <option value="date">По дате</option>
+            <option value="size">По размеру</option>
+          </select>
+        </div>
+      </div>
+
+      <div class="breadcrumb" id="breadcrumb">
+        <span class="breadcrumb-item" onclick="navigateTo('')">Корень</span>
+      </div>
+
+      <div class="files-grid" id="filesGrid"></div>
+    </main>
+
+    <!-- FAB Кнопки -->
+    <div class="fab-group">
+      <button class="fab" id="createFolderBtn" title="Создать папку">
+        <span class="material-symbols-outlined">create_new_folder</span>
+      </button>
+      <button class="fab" id="uploadBtn" title="Загрузить файл">
+        <span class="material-symbols-outlined">upload_file</span>
+      </button>
+    </div>
+    <input type="file" id="fileInput" class="hidden" multiple />
+  </div>
+
+  <!-- Firebase Web SDK v10 CDN -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
+    import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
+    import { getFirestore, collection, addDoc, getDocs, deleteDoc, doc, query, where, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
+    import { getStorage, ref, uploadBytesResumable, getDownloadURL, deleteObject } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-storage.js";
+
+    // Ваши реальные ключи Firebase
+    const firebaseConfig = {
+      apiKey: "AIzaSyBbbwr-vBautXzj5Ga4NomjPjclGQolniE",
+      authDomain: "gcloud-d3906.firebaseapp.com",
+      projectId: "gcloud-d3906",
+      storageBucket: "gcloud-d3906.firebasestorage.app",
+      messagingSenderId: "178167683995",
+      appId: "1:178167683995:web:a989bcbce5837134a15f3e",
+      measurementId: "G-YDH9E9GS0N"
+    };
+
+    const SYSTEM_EMAIL = "admin@gcloud.internal";
+
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+    const storage = getStorage(app);
+
+    let currentPath = "";
+    let itemsCache = [];
+
+    // Авторизация
+    document.getElementById('loginBtn').addEventListener('click', async () => {
+      const password = document.getElementById('passwordInput').value;
+      const errorEl = document.getElementById('loginError');
+      errorEl.classList.add('hidden');
+      
+      try {
+        await signInWithEmailAndPassword(auth, SYSTEM_EMAIL, password);
+      } catch (err) {
+        errorEl.textContent = "Неверный пароль или ошибка доступа";
+        errorEl.classList.remove('hidden');
+      }
+    });
+
+    document.getElementById('logoutBtn').addEventListener('click', () => signOut(auth));
+
+    onAuthStateChanged(auth, (user) => {
+      if (user) {
+        document.getElementById('loginScreen').classList.add('hidden');
+        document.getElementById('appScreen').classList.remove('hidden');
+        loadFolder(currentPath);
+      } else {
+        document.getElementById('loginScreen').classList.remove('hidden');
+        document.getElementById('appScreen').classList.add('hidden');
+      }
+    });
+
+    // Загрузка списков
+    async function loadFolder(path) {
+      currentPath = path;
+      renderBreadcrumbs();
+      const filesGrid = document.getElementById('filesGrid');
+      filesGrid.innerHTML = 'Загрузка...';
+
+      try {
+        const q = query(collection(db, "files"), where("parentPath", "==", currentPath));
+        const snapshot = await getDocs(q);
+        itemsCache = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+        renderItems(itemsCache);
+      } catch (e) {
+        filesGrid.innerHTML = 'Ошибка загрузки файлов: ' + e.message;
+      }
+    }
+
+    function renderItems(items) {
+      const filesGrid = document.getElementById('filesGrid');
+      filesGrid.innerHTML = '';
+
+      items.forEach(item => {
+        const card = document.createElement('div');
+        card.className = 'file-card';
+
+        let iconOrImg = item.isFolder 
+          ? `<span class="material-symbols-outlined" style="font-size: 48px; color: var(--md-sys-color-primary)">folder</span>`
+          : (item.type && item.type.startsWith('image/') 
+              ? `<img src="${item.url}" class="preview" />`
+              : `<span class="material-symbols-outlined" style="font-size: 48px;">description</span>`);
+
+        card.innerHTML = `
+          <div class="preview">${iconOrImg}</div>
+          <div class="info">
+            <div class="name" title="${item.name}">${item.name}</div>
+            <div class="meta">${item.isFolder ? 'Папка' : formatSize(item.size)}</div>
+          </div>
+          <div class="actions">
+            ${!item.isFolder ? `<button class="icon-btn" onclick="window.open('${item.url}', '_blank')"><span class="material-symbols-outlined">download</span></button>` : ''}
+            <button class="icon-btn" onclick="deleteItem('${item.id}', '${item.storagePath}', ${item.isFolder})"><span class="material-symbols-outlined">delete</span></button>
+          </div>
+        `;
+
+        if (item.isFolder) {
+          card.addEventListener('click', (e) => {
+            if (!e.target.closest('.actions')) {
+              loadFolder(currentPath ? `${currentPath}/${item.name}` : item.name);
+            }
+          });
+        }
+        filesGrid.appendChild(card);
+      });
+    }
+
+    // Загрузка файлов
+    const fileInput = document.getElementById('fileInput');
+    document.getElementById('uploadBtn').addEventListener('click', () => fileInput.click());
+    fileInput.addEventListener('change', (e) => handleUpload(e.target.files));
+
+    async function handleUpload(files) {
+      for (let file of files) {
+        const storagePath = currentPath ? `${currentPath}/${file.name}` : file.name;
+        const storageRef = ref(storage, storagePath);
+        const uploadTask = uploadBytesResumable(storageRef, file);
+
+        uploadTask.on('state_changed', 
+          (s) => {
+            const p = (s.bytesTransferred / s.totalBytes) * 100;
+            document.getElementById('progressBar').style.width = p + '%';
+          },
+          (err) => alert("Ошибка загрузки: " + err.message),
+          async () => {
+            document.getElementById('progressBar').style.width = '0%';
+            const url = await getDownloadURL(uploadTask.snapshot.ref);
+            await addDoc(collection(db, "files"), {
+              name: file.name,
+              size: file.size,
+              type: file.type,
+              url: url,
+              storagePath: storagePath,
+              parentPath: currentPath,
+              isFolder: false,
+              createdAt: serverTimestamp()
+            });
+            loadFolder(currentPath);
+          }
+        );
+      }
+    }
+
+    // Создание папки
+    document.getElementById('createFolderBtn').addEventListener('click', async () => {
+      const name = prompt("Введите имя папки:");
+      if (!name) return;
+      await addDoc(collection(db, "files"), {
+        name: name,
+        parentPath: currentPath,
+        isFolder: true,
+        createdAt: serverTimestamp()
+      });
+      loadFolder(currentPath);
+    });
+
+    // Удаление
+    window.deleteItem = async (id, storagePath, isFolder) => {
+      if (!confirm("Удалить элемент?")) return;
+      try {
+        if (!isFolder && storagePath) {
+          await deleteObject(ref(storage, storagePath));
+        }
+        await deleteDoc(doc(db, "files", id));
+        loadFolder(currentPath);
+      } catch(e) {
+        alert("Ошибка при удалении: " + e.message);
+      }
+    };
+
+    // Навигация и Хлебные крошки
+    window.navigateTo = (path) => loadFolder(path);
+    function renderBreadcrumbs() {
+      const bc = document.getElementById('breadcrumb');
+      const parts = currentPath.split('/').filter(Boolean);
+      let html = `<span class="breadcrumb-item" onclick="navigateTo('')">Корень</span>`;
+      let buildPath = '';
+      parts.forEach(p => {
+        buildPath += (buildPath ? '/' : '') + p;
+        html += ` / <span class="breadcrumb-item" onclick="navigateTo('${buildPath}')">${p}</span>`;
+      });
+      bc.innerHTML = html;
+    }
+
+    // Поиск и Сортировка
+    document.getElementById('searchInput').addEventListener('input', (e) => {
+      const val = e.target.value.toLowerCase();
+      const filtered = itemsCache.filter(i => i.name.toLowerCase().includes(val));
+      renderItems(filtered);
+    });
+
+    document.getElementById('sortSelect').addEventListener('change', (e) => {
+      const val = e.target.value;
+      const sorted = [...itemsCache].sort((a,b) => {
+        if (val === 'name') return a.name.localeCompare(b.name);
+        if (val === 'size') return (b.size || 0) - (a.size || 0);
+        return 0;
+      });
+      renderItems(sorted);
+    });
+
+    // Drag and Drop
+    const dz = document.getElementById('dropZone');
+    dz.addEventListener('dragover', (e) => { e.preventDefault(); dz.classList.add('drag-active'); });
+    dz.addEventListener('dragleave', () => dz.classList.remove('drag-active'));
+    dz.addEventListener('drop', (e) => {
+      e.preventDefault();
+      dz.classList.remove('drag-active');
+      if (e.dataTransfer.files.length) handleUpload(e.dataTransfer.files);
+    });
+
+    // Вспомогательные функции
+    function formatSize(bytes) {
+      if (!bytes) return '0 B';
+      const k = 1024, sizes = ['B', 'KB', 'MB', 'GB'];
+      const i = Math.floor(Math.log(bytes) / Math.log(k));
+      return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
+    }
+
+    // Переключение темы
+    document.getElementById('themeToggle').addEventListener('click', () => {
+      const isDark = document.body.getAttribute('data-theme') === 'dark';
+      document.body.setAttribute('data-theme', isDark ? 'light' : 'dark');
+    });
+  </script>
+</body>
+</html>
