@@ -82,22 +82,19 @@
     .fab-group { position: fixed; bottom: 24px; right: 24px; display: flex; flex-direction: column; gap: 12px; }
     .fab { width: 56px; height: 56px; border-radius: var(--md-sys-shape-corner-large); background: var(--md-sys-color-primary-container); color: var(--md-sys-color-on-primary-container); border: none; display: flex; align-items: center; justify-content: center; cursor: pointer; box-shadow: 0 4px 10px rgba(0,0,0,0.2); }
 
-    /* Плавающее окно загрузки */
     .upload-modal { position: fixed; bottom: 24px; left: 24px; background: var(--md-sys-color-surface-variant); padding: 20px; border-radius: var(--md-sys-shape-corner-large); box-shadow: 0 8px 24px rgba(0,0,0,0.3); width: 300px; z-index: 1000; border: 1px solid var(--md-sys-color-outline); }
     .upload-title { font-weight: 500; margin-bottom: 8px; display: flex; justify-content: space-between; font-size: 0.9rem; }
     .progress-track { width: 100%; height: 8px; background: rgba(0,0,0,0.1); border-radius: 4px; overflow: hidden; }
     .progress-fill { height: 100%; width: 0%; background: var(--md-sys-color-primary); transition: width 0.2s; }
 
-    .drag-active { border: 2px dashed var(--md-sys-color-primary); background: var(--md-sys-color-primary-container); }
     .hidden { display: none !important; }
   </style>
 </head>
-<body id="dropZone">
+<body>
 
-  <!-- Окно индикатора загрузки -->
   <div id="uploadModal" class="upload-modal hidden">
     <div class="upload-title">
-      <span id="uploadFileName">Загрузка файла...</span>
+      <span id="uploadFileName">Сохранение...</span>
       <span id="uploadPercent">0%</span>
     </div>
     <div class="progress-track">
@@ -143,7 +140,6 @@
         <div>
           <select id="sortSelect" style="padding: 8px 12px; border-radius: 8px; background: var(--md-sys-color-surface-variant); color: var(--md-sys-color-on-surface); border: none;">
             <option value="name">По имени</option>
-            <option value="date">По дате</option>
             <option value="size">По размеру</option>
           </select>
         </div>
@@ -171,16 +167,13 @@
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-app.js";
     import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
     import { getFirestore, collection, addDoc, getDocs, deleteDoc, doc, query, where, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js";
-    import { getStorage, ref, uploadBytesResumable, getDownloadURL, deleteObject } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-storage.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyBbbwr-vBautXzj5Ga4NomjPjclGQolniE",
       authDomain: "gcloud-d3906.firebaseapp.com",
       projectId: "gcloud-d3906",
-      storageBucket: "gcloud-d3906.firebasestorage.app",
       messagingSenderId: "178167683995",
-      appId: "1:178167683995:web:a989bcbce5837134a15f3e",
-      measurementId: "G-YDH9E9GS0N"
+      appId: "1:178167683995:web:a989bcbce5837134a15f3e"
     };
 
     const SYSTEM_EMAIL = "admin@gcloud.internal";
@@ -188,7 +181,6 @@
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
     const db = getFirestore(app);
-    const storage = getStorage(app);
 
     let currentPath = "";
     let itemsCache = [];
@@ -197,11 +189,10 @@
       const password = document.getElementById('passwordInput').value;
       const errorEl = document.getElementById('loginError');
       errorEl.classList.add('hidden');
-      
       try {
         await signInWithEmailAndPassword(auth, SYSTEM_EMAIL, password);
       } catch (err) {
-        errorEl.textContent = "Неверный пароль или ошибка доступа";
+        errorEl.textContent = "Неверный пароль";
         errorEl.classList.remove('hidden');
       }
     });
@@ -231,7 +222,7 @@
         itemsCache = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
         renderItems(itemsCache);
       } catch (e) {
-        filesGrid.innerHTML = 'Ошибка загрузки файлов: ' + e.message;
+        filesGrid.innerHTML = 'Ошибка: ' + e.message;
       }
     }
 
@@ -246,7 +237,7 @@
         let iconOrImg = item.isFolder 
           ? `<span class="material-symbols-outlined" style="font-size: 48px; color: var(--md-sys-color-primary)">folder</span>`
           : (item.type && item.type.startsWith('image/') 
-              ? `<img src="${item.url}" class="preview" />`
+              ? `<img src="${item.content}" class="preview" />`
               : `<span class="material-symbols-outlined" style="font-size: 48px;">description</span>`);
 
         card.innerHTML = `
@@ -256,8 +247,8 @@
             <div class="meta">${item.isFolder ? 'Папка' : formatSize(item.size)}</div>
           </div>
           <div class="actions">
-            ${!item.isFolder ? `<button class="icon-btn" onclick="window.open('${item.url}', '_blank')"><span class="material-symbols-outlined">download</span></button>` : ''}
-            <button class="icon-btn" onclick="deleteItem('${item.id}', '${item.storagePath}', ${item.isFolder})"><span class="material-symbols-outlined">delete</span></button>
+            ${!item.isFolder ? `<button class="icon-btn" onclick="downloadFile('${item.name}', '${item.content}')"><span class="material-symbols-outlined">download</span></button>` : ''}
+            <button class="icon-btn" onclick="deleteItem('${item.id}')"><span class="material-symbols-outlined">delete</span></button>
           </div>
         `;
 
@@ -284,48 +275,57 @@
 
       modal.classList.remove('hidden');
 
-      for (let file of files) {
-        fileNameEl.textContent = file.name;
-        const storagePath = currentPath ? `${currentPath}/${file.name}` : file.name;
-        const storageRef = ref(storage, storagePath);
-        const uploadTask = uploadBytesResumable(storageRef, file);
+      for (let i = 0; i < files.length; i++) {
+        let file = files[i];
+        if (file.size > 800000) {
+          alert(`Файл "${file.name}" слишком большой (лимит ~800 КБ)`);
+          continue;
+        }
 
-        await new Promise((resolve) => {
-          uploadTask.on('state_changed', 
-            (s) => {
-              const p = Math.round((s.bytesTransferred / s.totalBytes) * 100);
-              percentEl.textContent = p + '%';
-              progressFill.style.width = p + '%';
-            },
-            (err) => {
-              alert("Ошибка загрузки: " + err.message);
-              resolve();
-            },
-            async () => {
-              const url = await getDownloadURL(uploadTask.snapshot.ref);
-              await addDoc(collection(db, "files"), {
-                name: file.name,
-                size: file.size,
-                type: file.type,
-                url: url,
-                storagePath: storagePath,
-                parentPath: currentPath,
-                isFolder: false,
-                createdAt: serverTimestamp()
-              });
-              resolve();
-            }
-          );
+        fileNameEl.textContent = file.name;
+        percentEl.textContent = '50%';
+        progressFill.style.width = '50%';
+
+        const base64 = await readFileAsBase64(file);
+
+        percentEl.textContent = '90%';
+        progressFill.style.width = '90%';
+
+        await addDoc(collection(db, "files"), {
+          name: file.name,
+          size: file.size,
+          type: file.type,
+          content: base64,
+          parentPath: currentPath,
+          isFolder: false,
+          createdAt: serverTimestamp()
         });
       }
 
-      modal.classList.add('hidden');
-      progressFill.style.width = '0%';
+      percentEl.textContent = '100%';
+      progressFill.style.width = '100%';
+      setTimeout(() => modal.classList.add('hidden'), 500);
       loadFolder(currentPath);
     }
 
+    function readFileAsBase64(file) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
+    }
+
+    window.downloadFile = (name, content) => {
+      const a = document.createElement('a');
+      a.href = content;
+      a.download = name;
+      a.click();
+    };
+
     document.getElementById('createFolderBtn').addEventListener('click', async () => {
-      const name = prompt("Введите имя папки:");
+      const name = prompt("Имя папки:");
       if (!name) return;
       await addDoc(collection(db, "files"), {
         name: name,
@@ -336,17 +336,10 @@
       loadFolder(currentPath);
     });
 
-    window.deleteItem = async (id, storagePath, isFolder) => {
-      if (!confirm("Удалить элемент?")) return;
-      try {
-        if (!isFolder && storagePath) {
-          await deleteObject(ref(storage, storagePath));
-        }
-        await deleteDoc(doc(db, "files", id));
-        loadFolder(currentPath);
-      } catch(e) {
-        alert("Ошибка при удалении: " + e.message);
-      }
+    window.deleteItem = async (id) => {
+      if (!confirm("Удалить?")) return;
+      await deleteDoc(doc(db, "files", id));
+      loadFolder(currentPath);
     };
 
     window.navigateTo = (path) => loadFolder(path);
@@ -364,27 +357,7 @@
 
     document.getElementById('searchInput').addEventListener('input', (e) => {
       const val = e.target.value.toLowerCase();
-      const filtered = itemsCache.filter(i => i.name.toLowerCase().includes(val));
-      renderItems(filtered);
-    });
-
-    document.getElementById('sortSelect').addEventListener('change', (e) => {
-      const val = e.target.value;
-      const sorted = [...itemsCache].sort((a,b) => {
-        if (val === 'name') return a.name.localeCompare(b.name);
-        if (val === 'size') return (b.size || 0) - (a.size || 0);
-        return 0;
-      });
-      renderItems(sorted);
-    });
-
-    const dz = document.getElementById('dropZone');
-    dz.addEventListener('dragover', (e) => { e.preventDefault(); dz.classList.add('drag-active'); });
-    dz.addEventListener('dragleave', () => dz.classList.remove('drag-active'));
-    dz.addEventListener('drop', (e) => {
-      e.preventDefault();
-      dz.classList.remove('drag-active');
-      if (e.dataTransfer.files.length) handleUpload(e.dataTransfer.files);
+      renderItems(itemsCache.filter(i => i.name.toLowerCase().includes(val)));
     });
 
     function formatSize(bytes) {
@@ -401,4 +374,3 @@
   </script>
 </body>
 </html>
-p
